@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EL REY - Le Jeu de Cartes Officiel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- ÉCRAN DE MENU PRINCIPAL -->
+        <div id="main-menu" class="screen active">
+            <div class="menu-container">
+                <h1 class="logo-title">EL REY</h1>
+                <p class="logo-subtitle">L'art de la bataille des plis</p>
+                
+                <div class="setup-box">
+                    <h3>CHOISISSEZ VOTRE ADVERSAIRE</h3>
+                    <div class="bot-selector-group">
+                        <label class="bot-card-option">
+                            <input type="radio" name="bot-intelligence" value="ilyes" checked>
+                            <div class="bot-card-design">
+                                <span class="bot-avatar">🤖</span>
+                                <span class="bot-name-text">Ilyes</span>
+                                <span class="bot-desc-text">Niveau Débutant<br>Joue de manière totalement aléatoire.</span>
+                            </div>
+                        </label>
+                        
+                        <label class="bot-card-option">
+                            <input type="radio" name="bot-intelligence" value="fouad">
+                            <div class="bot-card-design">
+                                <span class="bot-avatar">🧠</span>
+                                <span class="bot-name-text">Fouad</span>
+                                <span class="bot-desc-text">Niveau Expert<br>Calcule la force et compte les points.</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="menu-footer">
+                    <button id="btn-start-game" class="btn-primary">ENTRER DANS L'ARÈNE</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ÉCRAN DE JEU PRINCIPAL -->
+        <div id="game-screen" class="screen">
+            <!-- Panneau Supérieur de Statut et Scores -->
+            <header class="game-top-bar">
+                <div class="ui-container">
+                    <div class="score-panel ai-panel">
+                        <div class="panel-label" id="ai-label-name">BOT: ILYES</div>
+                        <div class="panel-value"><span id="txt-ai-score">0</span> <small>pts</small></div>
+                    </div>
+                    
+                    <div class="center-status-panel">
+                        <div id="txt-game-status" class="status-bubble">Préparation du paquet de cartes...</div>
+                        <div id="badge-deck-count" class="deck-badge">Cartes restantes : 40</div>
+                    </div>
+                    
+                    <div class="score-panel player-panel">
+                        <div class="panel-label">VOTRE SCORE</div>
+                        <div class="panel-value highlight"><span id="txt-player-score">0</span> <small>pts</small></div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Zone de Combat Centrale -->
+            <main class="battleground">
+                <!-- Zone Masquée de la main de l'IA (Purement Visuelle) -->
+                <div id="container-ai-hand" class="hand-row ai-hidden-hand"></div>
+
+                <!-- Tapis de jeu central -->
+                <div class="game-table">
+                    <!-- Emplacement de l'Atout et de la Pioche -->
+                    <div class="deck-area-wrapper">
+                        <div class="area-label">ATOUT DU MATCH</div>
+                        <div class="deck-stack">
+                            <div id="card-atout-display" class="game-card"></div>
+                            <div id="deck-back-pile" class="game-card card-back-style"></div>
+                        </div>
+                    </div>
+
+                    <!-- Zone de dépôt des plis -->
+                    <div class="arena-slots">
+                        <div class="arena-slot-box">
+                            <span class="slot-owner" id="label-slot-ai">IA</span>
+                            <div id="slot-ai-trick" class="drop-zone-slot"></div>
+                        </div>
+                        
+                        <div class="arena-slot-box">
+                            <span class="slot-owner">VOUS</span>
+                            <div id="slot-player-trick" class="drop-zone-slot"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main interactive du joueur humain -->
+                <div class="player-interaction-zone">
+                    <div class="zone-helper-text">Sélectionnez une carte valide de votre main pour la jouer :</div>
+                    <div id="container-player-hand" class="hand-row player-interactive-hand"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
