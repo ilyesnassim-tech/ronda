@@ -1,6 +1,6 @@
 /**
  * ENGINE DE JEU COMPLET - EL REY 
- * Système Automatisé Front-End & IA Tactique
+ * Système Automatisé Front-End & IA Tactique (Règles Ronda)
  */
 
 // Cartographie exacte de ton image deck.jpg (4 lignes de couleurs)
@@ -111,12 +111,8 @@ function updateStatusNotification(message) {
  */
 function calculateCardSpriteOffset(cardObject) {
     const columnIndex = CARD_VALUES.indexOf(cardObject.val);
-    
-    // Position X (Colonnes) divisée par 9 étapes (0 à 100%)
     const posX = ((columnIndex / 9) * 100).toFixed(3);
-    // Position Y (Lignes) divisée par 3 étapes (0 à 100%)
     const posY = ((cardObject.row / 3) * 100).toFixed(3);
-    
     return `${posX}% ${posY}%`;
 }
 
@@ -135,7 +131,59 @@ function compileValidSelectionSublist(handArray, openCard) {
 }
 
 /**
- * RECONSTRUCTION ET RENDU DU COMPOSANT VISUEL (RENDER ENGINE - MODIFIÉ POUR L'ATOUT)
+ * FONCTION DE COMPORTEMENT : Échange du 6 d'atout (Joueur Humain)
+ */
+function tryExchangingSixForAtout() {
+    if (state.isPhaseDemandeActive || !state.atoutCard) return;
+
+    // L'atout sur table doit être supérieur au 6 (1, 7, 10, 11, 12)
+    const validValuesToSwap = [1, 7, 10, 11, 12];
+    if (!validValuesToSwap.includes(state.atoutCard.val)) return;
+
+    // On cherche le 6 de la couleur de l'atout dans la main du joueur
+    const sixAtoutIndex = state.playerHand.findIndex(card => card.suit === state.atoutCard.suit && card.val === 6);
+
+    if (sixAtoutIndex !== -1) {
+        const oldAtout = state.atoutCard;
+        const playerSix = state.playerHand.splice(sixAtoutIndex, 1)[0];
+
+        // Le 6 remplace l'atout sur table et sous le deck
+        state.atoutCard = playerSix;
+        state.masterDeck[state.masterDeck.length - 1] = playerSix;
+
+        // Le joueur récupère la grosse carte d'atout dans sa main
+        state.playerHand.push(oldAtout);
+
+        updateStatusNotification(`🔄 Vous avez échangé votre 6 d'atout contre le ${oldAtout.val} d'atout !`);
+        refreshGraphicsLayout();
+    }
+}
+
+/**
+ * GESTION DE L'ÉCHANGE DU 6 D'ATOUT PAR L'IA
+ */
+function handleAiAtoutExchangeCheck() {
+    if (state.isPhaseDemandeActive || !state.atoutCard) return;
+    const validValuesToSwap = [1, 7, 10, 11, 12];
+    if (!validValuesToSwap.includes(state.atoutCard.val)) return;
+
+    const sixAtoutIndex = state.aiHand.findIndex(card => card.suit === state.atoutCard.suit && card.val === 6);
+    
+    if (sixAtoutIndex !== -1) {
+        const oldAtout = state.atoutCard;
+        const aiSix = state.aiHand.splice(sixAtoutIndex, 1)[0];
+
+        state.atoutCard = aiSix;
+        state.masterDeck[state.masterDeck.length - 1] = aiSix;
+        state.aiHand.push(oldAtout);
+
+        const botName = state.botStrategyMode === 'ilyes' ? 'Ilyes' : 'Fouad';
+        updateStatusNotification(`🔄 ${botName} a échangé son 6 d'atout contre le ${oldAtout.val} d'atout !`);
+    }
+}
+
+/**
+ * RECONSTRUCTION ET RENDU DU COMPOSANT VISUEL
  */
 function refreshGraphicsLayout() {
     document.getElementById('txt-player-score').innerText = state.playerScore;
@@ -153,8 +201,22 @@ function refreshGraphicsLayout() {
         deckBadge.innerText = `Cartes restantes dans la pioche : ${state.masterDeck.length}`;
         if (backPile) backPile.style.display = 'block'; 
         if (atoutDiv && state.atoutCard) {
-            atoutDiv.style.display = 'block'; // Force la carte d'atout à être visible
+            atoutDiv.style.display = 'block';
             atoutDiv.style.backgroundPosition = calculateCardSpriteOffset(state.atoutCard);
+            
+            // Configuration du clic sur l'atout si l'échange est légitime
+            const hasSix = state.playerHand.some(card => card.suit === state.atoutCard.suit && card.val === 6);
+            const validValuesToSwap = [1, 7, 10, 11, 12];
+            
+            if (hasSix && validValuesToSwap.includes(state.atoutCard.val)) {
+                atoutDiv.classList.add('can-exchange-atout'); 
+                atoutDiv.onclick = tryExchangingSixForAtout;
+                atoutDiv.title = "Cliquez pour échanger votre 6 d'atout !";
+            } else {
+                atoutDiv.classList.remove('can-exchange-atout');
+                atoutDiv.onclick = null;
+                atoutDiv.title = "";
+            }
         }
     }
 
@@ -230,10 +292,13 @@ function triggerPlayerCardCommit(cardIndex) {
 }
 
 /**
- * Calcul de l'intelligence artificielle (Ilyes vs Fouad)
+ * Calcul de l'intelligence artificielle
  */
 function executeAiBrainProcessing() {
     if (state.aiHand.length === 0) return;
+
+    // L'IA applique sa vérification d'échange d'atout avant de choisir sa carte
+    handleAiAtoutExchangeCheck();
 
     const leadCard = state.currentTrick.leadByPlayer ? state.currentTrick.playerCard : null;
     const legitimateAiOptions = compileValidSelectionSublist(state.aiHand, leadCard);
@@ -245,6 +310,7 @@ function executeAiBrainProcessing() {
         chosenIndex = Math.floor(Math.random() * legitimateAiOptions.length);
     } else {
         if (leadCard) {
+            // Recherche d'une carte gagnante (Atout ou Même couleur plus forte)
             let winningCombos = legitimateAiOptions.filter(card => {
                 const cutsWithAtout = (card.suit === state.atoutCard.suit && leadCard.suit !== state.atoutCard.suit);
                 const winsWithHigherPower = (card.suit === leadCard.suit && card.power > leadCard.power);
@@ -290,7 +356,7 @@ function executeAiBrainProcessing() {
 }
 
 /**
- * Résolution algorithmique du pli (Comparaison des forces)
+ * Résolution algorithmique du pli (REGLES RONDA CORRIGÉES)
  */
 function concludeActiveTrickEvaluation() {
     const playerCard = state.currentTrick.playerCard;
@@ -300,14 +366,15 @@ function concludeActiveTrickEvaluation() {
     const opener = state.currentTrick.leadByPlayer ? playerCard : aiCard;
     const responder = state.currentTrick.leadByPlayer ? aiCard : playerCard;
     
-    let openerWon = true;
+    let openerWon = true; // Par défaut, celui qui ouvre gagne le pli
 
-    // RÈGLE DE COUPE ET DE FORCE
+    // L'ouvreur perd UNIQUEMENT SI le répondant coupe à l'atout, ou fournit la MÊME couleur en plus fort
     if (responder.suit === state.atoutCard.suit && opener.suit !== state.atoutCard.suit) {
-        openerWon = false; 
+        openerWon = false; // Le répondant coupe avec de l'atout
     } else if (responder.suit === opener.suit && responder.power > opener.power) {
-        openerWon = false; 
+        openerWon = false; // Le répondant fournit la même couleur avec une carte plus puissante
     }
+    // Si le répondant met une autre couleur non-atout, openerWon reste vrai (Règle Ronda)
 
     const playerWon = state.currentTrick.leadByPlayer ? openerWon : !openerWon;
     const totalTrickPoints = playerCard.points + aiCard.points;
@@ -322,7 +389,7 @@ function concludeActiveTrickEvaluation() {
         updateStatusNotification(`❌ ${botName} gagne le pli (+${totalTrickPoints} pts).`);
     }
 
-    // DISTRIBUTION DE LA PIOCHE APRÈS LE PLI
+    // DISTRIBUTION DE LA PIOCHE APRÈS LE COMBAT
     if (state.masterDeck.length > 0) {
         if (playerWon) {
             state.playerHand.push(state.masterDeck.pop());
